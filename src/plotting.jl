@@ -107,3 +107,45 @@ function plot_dos(basis, eigenvalues; εF=nothing, unit=u"hartree",
     p
 end
 plot_dos(scfres; kwargs...) = plot_dos(scfres.basis, scfres.eigenvalues; scfres.εF, kwargs...)
+
+
+function plot_pdos(
+    basis, eigenvalues, ψ; εF=nothing, unit=u"hartree",
+    εrange=default_band_εrange(eigenvalues; εF), n_points=1000, kwargs...
+)
+    n_spin = basis.model.n_spin_components
+    eshift = something(εF, 0.0)
+    εs = range(austrip.(εrange)..., length=n_points)
+
+    # Constant to convert from AU to the desired unit
+    to_unit = ustrip(auconvert(unit, 1.0))
+
+    p = Plots.plot(; kwargs...)
+    spinlabels = spin_components(basis.model)
+    colors = [:blue, :red, :green, :orange, :purple, :brown, :pink, :gray, :olive, :cyan]
+
+    # Compute PDOS for each spin component
+    PDOS = [compute_pdos(εs, basis, eigenvalues, ψ, spin=σ) for σ in 1:n_spin]
+
+    for σ in 1:n_spin
+        pdos = PDOS[σ]
+        for (projector_idx, label) in enumerate(projector_labels)
+            pdos_projector = pdos[:, projector_idx]
+            label = n_spin > 1 ? "PDOS $(spinlabels[σ]) $(label)" : "PDOS $(label)"
+            Plots.plot!(p, (εs .- eshift) .* to_unit, pdos_projector; label, color=colors[projector_idx])
+        end
+    end
+
+    if !isnothing(εF)
+        Plots.vline!(p, [0.0], label="εF", color=:black, lw=1.5)
+    end
+
+    if isnothing(εF)
+        Plots.xlabel!(p, "Energy ($(string(unit)))")
+    else
+        Plots.xlabel!(p, "Energy - ε_F ($(string(unit)))")
+    end
+    Plots.ylabel!(p, "Projected DOS")
+    p
+end
+plot_pdos(scfres; kwargs...) = plot_pdos(scfres.basis, scfres.eigenvalues, scfres.ψ; scfres.εF, kwargs...)

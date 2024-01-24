@@ -201,6 +201,8 @@ include("postprocess/stresses.jl")
 export compute_dos
 export compute_ldos
 export plot_dos
+export plot_pdos
+export compute_pdos
 include("postprocess/dos.jl")
 export compute_χ0
 export apply_χ0
